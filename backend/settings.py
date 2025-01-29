@@ -25,7 +25,9 @@ SECRET_KEY = 'django-insecure-ri+!u%)(%46v=j-zix+-_!(*@5dn!^+g$)sbwsiihgi9hh+psv
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# Da inserire gli ip del computer di Renato, per la connessione con ESP32
+# E da cambiare assolutamente il contratto di SSL
+ALLOWED_HOSTS = ['127.0.0.1']
 
 
 # Application definition
@@ -37,7 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'blockchain'
+    'blockchain',
+    'django_extensions',
 ]
 
 MIDDLEWARE = [
@@ -122,3 +125,11 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+SECURE_SSL_REDIRECT = False  # Forza il redirect su HTTPS
+SESSION_COOKIE_SECURE = True  # Usa cookie solo tramite HTTPS
+CSRF_COOKIE_SECURE = True  # Protegge i CSRF cookie tramite HTTPS
+SECURE_HSTS_SECONDS = 31536000  # Abilita HSTS
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
