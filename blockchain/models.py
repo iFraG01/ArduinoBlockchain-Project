@@ -1,28 +1,20 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser, Group, Permission
 
-# Modello per gli Amministratori
-class Administrator(AbstractUser):
-    first_name = models.CharField(max_length=255, verbose_name="Nome")
-    last_name = models.CharField(max_length=255, verbose_name="Cognome")
-    email = models.EmailField(unique=True, verbose_name="Email")
-    password = models.CharField(max_length=255, verbose_name="Password")
+# 1️⃣ SUPERUSER (Amministratore con accesso alla dashboard)
+class Administrator(AbstractUser):  
+    groups = models.ManyToManyField(Group, related_name="administrator_groups")
+    user_permissions = models.ManyToManyField(Permission, related_name="administrator_permissions")
 
-    groups = models.ManyToManyField(Group, related_name='admin_groups')
-    user_permissions = models.ManyToManyField(Permission, related_name='admin_permissions')
-    
     def __str__(self):
-        return self.email
+        return self.username  # Identifica l'amministratore con il nome utente
 
-# Modello per gli Utenti (User)
+
+# 2️⃣ UTENTI NORMALI (Solo nome, cognome e codice, senza accesso)
 class User(models.Model):
-    id = models.AutoField(primary_key=True)
     first_name = models.CharField(max_length=255, verbose_name="Nome")
     last_name = models.CharField(max_length=255, verbose_name="Cognome")
-    unlock_code = models.CharField(max_length=6, verbose_name="Codice di sblocco")
+    unlock_code = models.CharField(max_length=6, unique=True, verbose_name="Codice di Sblocco")
 
-    groups = models.ManyToManyField(Group, related_name='user_groups')
-    user_permissions = models.ManyToManyField(Permission, related_name='user_permissions')
-    
     def __str__(self):
-        return f"{self.first_name} {self.last_name} (Codice: {self.unlock_code})"
+        return f"{self.first_name} {self.last_name} - Codice: {self.unlock_code}"
