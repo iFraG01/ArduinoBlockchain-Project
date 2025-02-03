@@ -88,7 +88,6 @@ def receive_esp32_data(request):
 
             # Registra l'esito sulla blockchain, ricorda di levare il commento alla funzione
             #log_access_on_blockchain(code, is_valid)
-
             return JsonResponse({'success': True, 'is_valid': is_valid})
         except json.JSONDecodeError:
             return JsonResponse({'success': False, 'message': 'Formato JSON non valido'}, status=400)
