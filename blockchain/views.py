@@ -1,7 +1,7 @@
 from django.shortcuts import render
 
 from django.http import JsonResponse
-from .utils import get_message
+from .utils import log_access_on_blockchain
 
 from django.views.decorators.csrf import csrf_exempt
 import json
@@ -73,39 +73,24 @@ def custom_logout(request):
     logout(request)
     return redirect("login")  # Torna alla pagina di login dopo il logout
 
-
-def contract_message(request):
-    try:
-        message = get_message()
-        return JsonResponse({"message": message})
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
-
-
 @csrf_exempt  # Disabilita il CSRF solo per test; in produzione usa autenticazione adeguata!
 def receive_esp32_data(request):
-    if request.method == "POST":
+    if request.method == 'POST':
         try:
-            # Decodifica il JSON inviato dalla ESP32
             data = json.loads(request.body)
+            code = data.get('code')
 
-            # Estrai il codice ricevuto
-            code = data.get("code", "")
+            if not code:
+                return JsonResponse({'success': False, 'message': 'Codice non fornito'}, status=400)
 
-            # Controlla se il codice è valido
-            if len(code) != 6:
-                return JsonResponse({"error": "Codice non valido"}, status=400)
+            # Controllo se esiste un utente con questo codice
+            is_valid = User.objects.filter(unlock_code=code).exists()
 
-            # Logica di elaborazione del codice (ad esempio verifica nel database)
-            # Qui puoi aggiungere la logica per confrontare il codice con il database
-            is_valid = (code == "123456")  # Esempio: codice di prova
+            # Registra l'esito sulla blockchain, ricorda di levare il commento alla funzione
+            #log_access_on_blockchain(code, is_valid)
 
-            if is_valid:
-                return JsonResponse({"status": "success", "message": "Accesso consentito"})
-            else:
-                return JsonResponse({"status": "error", "message": "Codice errato"}, status=401)
-
+            return JsonResponse({'success': True, 'is_valid': is_valid})
         except json.JSONDecodeError:
-            return JsonResponse({"error": "Formato JSON non valido"}, status=400)
-
-    return JsonResponse({"error": "Metodo non consentito"}, status=405)
+            return JsonResponse({'success': False, 'message': 'Formato JSON non valido'}, status=400)
+    
+    return JsonResponse({'success': False, 'message': 'Metodo non supportato'}, status=405)

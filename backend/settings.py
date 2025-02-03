@@ -27,7 +27,7 @@ DEBUG = True
 
 # Da inserire gli ip del computer di Renato, per la connessione con ESP32
 # E da cambiare assolutamente il contratto di SSL
-ALLOWED_HOSTS = ['127.0.0.1','192.168.178.40']
+ALLOWED_HOSTS = ['127.0.0.1','192.168.178.40','192.168.1.115']
 
 
 # Application definition
