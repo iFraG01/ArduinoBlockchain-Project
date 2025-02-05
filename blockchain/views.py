@@ -52,7 +52,6 @@ def add_user(request):
 
 # Vista per modificare un utente
 @login_required
-@login_required
 def edit_user(request):
     if request.method == "POST":
         user_id = request.POST.get('user_id')
@@ -156,6 +155,7 @@ def receive_esp32_data(request):
         'username': username  
     })
 
+@login_required
 def get_access_logs_view(request):
     """API endpoint per recuperare i log di accesso dalla blockchain."""
     logs = get_access_logs()
