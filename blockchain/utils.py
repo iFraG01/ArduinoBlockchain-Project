@@ -63,3 +63,38 @@ def get_access_logs():
     except Exception as e:
         print(f"❌ ERRORE in get_access_logs: {e}")  # Debug errore
         return JsonResponse({'error': str(e)}, status=500)
+    
+def log_user_operation(operation_type, username):
+    """Registra un'operazione sugli utenti sulla blockchain"""
+    try:
+        account = web3.eth.accounts[0]  # Usa il primo account di Hardhat
+        tx_hash = accessLog.functions.logUserOperation(operation_type, username).transact({'from': account})
+        receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
+
+        return {"status": "success", "tx_hash": receipt.transactionHash.hex()}
+    
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+    
+def get_user_operations():
+    """Recupera tutti i log delle operazioni utenti dalla blockchain"""
+    try:
+        operations = accessLog.functions.getUserOperations().call()
+        user_operations = []
+
+        for operation in operations:
+            operation_type = operation[0]  # Tipo di operazione: Aggiunta, Modifica, Eliminazione
+            username = operation[1]  # Nome dell'utente coinvolto
+            timestamp = operation[2]  # Timestamp dell'operazione
+
+            user_operations.append({
+                "operationType": operation_type,
+                "userName": username,
+                "timestamp": timestamp
+            })
+
+        return user_operations
+
+    except Exception as e:
+        print(f"❌ ERRORE in get_user_operations: {e}")  # Debug errore
+        return []

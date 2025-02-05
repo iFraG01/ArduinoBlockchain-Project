@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.http import JsonResponse
-from .utils import get_access_logs, log_access_on_blockchain
+from .utils import get_access_logs, get_user_operations, log_access_on_blockchain, log_user_operation
 from django.views.decorators.csrf import csrf_exempt
 import json
 from django.shortcuts import render, redirect
@@ -21,9 +21,13 @@ def delete_user(request, user_id):
     try:
         user = User.objects.get(id=user_id)
         user.delete()
-        messages.success(request, f"L'utente {user.first_name} {user.last_name} è stato eliminato con successo!")
+        messages.success(request, f"✅ L'utente {user.first_name} {user.last_name} è stato eliminato con successo!")
+
+        # Registra l'operazione sulla blockchain
+        log_user_operation("Eliminazione", f"{user.first_name} {user.last_name}")
+
     except User.DoesNotExist:
-        messages.error(request, "L'utente non esiste!")
+        messages.error(request, "⚠️ L'utente non esiste!")
 
     return redirect('user_management')
 
@@ -35,12 +39,44 @@ def add_user(request):
         last_name = request.POST.get('last_name')
         unlock_code = request.POST.get('unlock_code')
 
-        # Verifica che il codice sia univoco
         if User.objects.filter(unlock_code=unlock_code).exists():
-            messages.error(request, "Questo codice è già in uso!")
+            messages.error(request, "⚠️ Questo codice è già in uso!")
         else:
             User.objects.create(first_name=first_name, last_name=last_name, unlock_code=unlock_code)
-            messages.success(request, f"Utente {first_name} {last_name} aggiunto con successo!")
+            messages.success(request, f"✅ Utente {first_name} {last_name} aggiunto con successo!")
+
+            # Registra l'operazione sulla blockchain
+            log_user_operation("Aggiunta", first_name + " " + last_name)
+
+    return redirect('user_management')
+
+# Vista per modificare un utente
+@login_required
+@login_required
+def edit_user(request):
+    if request.method == "POST":
+        user_id = request.POST.get('user_id')
+        first_name = request.POST.get('first_name')
+        last_name = request.POST.get('last_name')
+        unlock_code = request.POST.get('unlock_code')
+
+        try:
+            user = User.objects.get(id=user_id)
+
+            if User.objects.filter(unlock_code=unlock_code).exclude(id=user_id).exists():
+                messages.error(request, "⚠️ Questo codice è già in uso!")
+            else:
+                user.first_name = first_name
+                user.last_name = last_name
+                user.unlock_code = unlock_code
+                user.save()
+                messages.success(request, f"✅ Utente {first_name} {last_name} modificato con successo!")
+
+                # Registra l'operazione sulla blockchain
+                log_user_operation("Modifica", f"{first_name} {last_name}")
+
+        except User.DoesNotExist:
+            messages.error(request, "⚠️ L'utente non esiste!")
 
     return redirect('user_management')
 
@@ -129,3 +165,9 @@ def get_access_logs_view(request):
         return JsonResponse({"error": logs["error"]}, status=500)
 
     return JsonResponse(logs, safe=False)
+
+# API per recuperare il log delle operazioni dalla blockchain
+@login_required
+def get_user_operations_view(request):
+    operations = get_user_operations()
+    return JsonResponse(operations, safe=False)
