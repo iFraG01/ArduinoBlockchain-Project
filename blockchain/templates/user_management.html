@@ -63,7 +63,7 @@
             background: #0056b3;
         }
 
-        /* Tabella Utenti */
+        /* Tabella */
         table {
             width: 100%;
             border-collapse: collapse;
@@ -141,7 +141,42 @@
             </tr>
             {% endfor %}
         </table>
+
+        <!-- 🔹 Sezione Log Accessi Blockchain -->
+        <h3>Log Accessi Blockchain</h3>
+        <button onclick="loadAccessLogs()">Aggiorna Log</button>
+        <table id="accessLogsTable">
+            <tr>
+                <th>Utente</th>
+                <th>Timestamp</th>
+                <th>Codice Hashato</th>
+            </tr>
+        </table>
     </div>
+
+    <!-- Script per recuperare i log via AJAX -->
+    <script>
+        function loadAccessLogs() {
+            fetch("{% url 'get_access_logs' %}")  // URL aggiornato
+                .then(response => response.json())
+                .then(data => {
+                    let table = document.getElementById("accessLogsTable");
+                    table.innerHTML = "<tr><th>Utente</th><th>Timestamp</th><th>Codice Hashato</th></tr>";
+
+                    data.forEach(log => {
+                        let row = table.insertRow();
+                        let userName = log.username || "Sconosciuto";
+                        let formattedDate = new Date(log.timestamp * 1000).toLocaleString();
+                        row.insertCell(0).textContent = userName;
+                        row.insertCell(1).textContent = formattedDate;
+                        row.insertCell(2).textContent = log.hashed_code;
+                    });
+                })
+                .catch(error => {
+                    console.error("Errore nel recupero dei log:", error);
+                });
+        }
+    </script>
 
 </body>
 </html>

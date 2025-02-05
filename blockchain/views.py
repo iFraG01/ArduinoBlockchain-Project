@@ -1,29 +1,21 @@
 from django.shortcuts import render
-
 from django.http import JsonResponse
-from .utils import log_access_on_blockchain
-
+from .utils import get_access_logs, log_access_on_blockchain
 from django.views.decorators.csrf import csrf_exempt
 import json
-
-
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from .models import User
 from django.contrib import messages
-
 from django.contrib.auth import authenticate, login, logout
 
-
-
-
-# 1️⃣ Vista per mostrare tutti gli utenti
+# Vista per mostrare tutti gli utenti
 @login_required  # Solo gli amministratori possono accedere
 def user_management(request):
     users = User.objects.all()
     return render(request, 'user_management.html', {'users': users})
 
-# 2️⃣ Vista per eliminare un utente
+# Vista per eliminare un utente
 @login_required
 def delete_user(request, user_id):
     try:
@@ -35,7 +27,7 @@ def delete_user(request, user_id):
 
     return redirect('user_management')
 
-# 3️⃣ Vista per aggiungere un utente
+# Vista per aggiungere un utente
 @login_required
 def add_user(request):
     if request.method == "POST":
@@ -52,8 +44,7 @@ def add_user(request):
 
     return redirect('user_management')
 
-
-# 1️⃣ Vista per gestire il login
+# Vista per gestire il login
 def custom_login(request):
     if request.method == "POST":
         username = request.POST["username"]
@@ -68,12 +59,12 @@ def custom_login(request):
 
     return render(request, "login.html")
 
-# 2️⃣ Vista per il logout
+# Vista per il logout
 def custom_logout(request):
     logout(request)
     return redirect("login")  # Torna alla pagina di login dopo il logout
 
-@csrf_exempt  # Disabilita il CSRF solo per test; in produzione usa autenticazione adeguata!
+'''@csrf_exempt  # Disabilita il CSRF solo per test; in produzione usa autenticazione adeguata!
 def receive_esp32_data(request):
     if request.method == 'POST':
         try:
@@ -92,4 +83,49 @@ def receive_esp32_data(request):
         except json.JSONDecodeError:
             return JsonResponse({'success': False, 'message': 'Formato JSON non valido'}, status=400)
     
-    return JsonResponse({'success': False, 'message': 'Metodo non supportato'}, status=405)
+    return JsonResponse({'success': False, 'message': 'Metodo non supportato'}, status=405)'''
+
+@csrf_exempt
+def receive_esp32_data(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            code = data.get('code')
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Formato JSON non valido'}, status=400)
+
+    elif request.method == 'GET':  # ✅ Permetti test con GET
+        code = request.GET.get('code')  # Prende il codice dall'URL
+
+    else:
+        return JsonResponse({'success': False, 'message': 'Metodo non supportato'}, status=405)
+
+    if not code:
+        return JsonResponse({'success': False, 'message': 'Codice non fornito'}, status=400)
+    
+    # Ricava l'utente dal database
+    user = User.objects.filter(unlock_code=code).first()  # Prende il primo utente con quel codice
+    is_valid = User.objects.filter(unlock_code=code).exists()
+
+    if user:
+        username = user.first_name + " " + user.last_name # Recupera il nome utente
+    else:
+        username = None
+
+    log_access_on_blockchain(code,username)
+
+    return JsonResponse({
+        'success': True,
+        'is_valid': is_valid,
+        'username': username  
+    })
+
+def get_access_logs_view(request):
+    """API endpoint per recuperare i log di accesso dalla blockchain."""
+    logs = get_access_logs()
+
+    # Se c'è un errore, restituisce un JSON con il messaggio di errore
+    if "error" in logs:
+        return JsonResponse({"error": logs["error"]}, status=500)
+
+    return JsonResponse(logs, safe=False)
