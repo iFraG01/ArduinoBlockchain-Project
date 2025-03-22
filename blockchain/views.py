@@ -141,13 +141,7 @@ def receive_esp32_data(request):
             code = data.get('code')
         except json.JSONDecodeError:
             return JsonResponse({'success': False, 'message': 'Formato JSON non valido'}, status=400)
-
-    elif request.method == 'GET':  # Permetti test con GET
-        code = request.GET.get('code')  # Prende il codice dall'URL
-
-    else:
-        return JsonResponse({'success': False, 'message': 'Metodo non supportato'}, status=405)
-
+        
     if not code:
         return JsonResponse({'success': False, 'message': 'Codice non fornito'}, status=400)
     
@@ -164,8 +158,8 @@ def receive_esp32_data(request):
         'is_valid': is_valid,
         'username': username,
         'result': result  
-    })
-
+    }) 
+ 
 @login_required
 def get_access_logs_view(request):
     logs = get_access_logs()
