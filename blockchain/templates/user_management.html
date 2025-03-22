@@ -15,7 +15,7 @@
         }
 
         .container {
-            max-width: 800px;
+            max-width: 900px;
             margin: auto;
             background: white;
             padding: 20px;
@@ -166,9 +166,9 @@
         <h3>Aggiungi Nuovo Utente</h3>
         <form method="POST" action="{% url 'add_user' %}">
             {% csrf_token %}
-            <input type="text" name="first_name" placeholder="Nome" required>
-            <input type="text" name="last_name" placeholder="Cognome" required>
-            <input type="text" name="unlock_code" placeholder="Codice di Sblocco (6 cifre)" required>
+            <input type="text" name="first_name" placeholder="Nome" required oninput="this.value = this.value.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ' ]/g, '')" maxlength="50">
+            <input type="text" name="last_name" placeholder="Cognome" required oninput="this.value = this.value.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ' ]/g, '')" maxlength="50">
+            <input type="text" name="unlock_code" placeholder="Codice di Sblocco (6 cifre)" maxlength="6" pattern="[0-9]{6}" required oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0,6)">
             <button type="submit">Aggiungi Utente</button>
         </form>
 
@@ -204,6 +204,7 @@
                 <th>Utente</th>
                 <th>Timestamp</th>
                 <th>Codice Hashato</th>
+                <th>Esito</th>
             </tr>
         </table>
 
@@ -225,9 +226,9 @@
                 <form id="editUserForm" method="POST" action="{% url 'edit_user' %}">
                     {% csrf_token %}
                     <input type="hidden" name="user_id" id="editUserId">
-                    <input type="text" name="first_name" id="editFirstName" required>
-                    <input type="text" name="last_name" id="editLastName" required>
-                    <input type="text" name="unlock_code" id="editUnlockCode" required>
+                    <input type="text" name="first_name" id="editFirstName" placeholder="Nome" required oninput="this.value = this.value.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ' ]/g, '')" maxlength="50">
+                    <input type="text" name="last_name" id="editLastName" placeholder="Cognome" required oninput="this.value = this.value.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ' ]/g, '')" maxlength="50">
+                    <input type="text" name="unlock_code" id="editUnlockCode" placeholder="Codice di Sblocco (6 cifre)" maxlength="6" pattern="[0-9]{6}" required oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0,6)">
                     <button type="submit">Salva Modifiche</button>
                 </form>
             </div>
@@ -251,15 +252,17 @@
                 .then(response => response.json())
                 .then(data => {
                     let table = document.getElementById("accessLogsTable");
-                    table.innerHTML = "<tr><th>Utente</th><th>Timestamp</th><th>Codice Hashato</th></tr>";
+                    table.innerHTML = "<tr><th>Utente</th><th>Timestamp</th><th>Codice Hashato</th><th>Esito</th></tr>";
 
                     data.forEach(log => {
                         let row = table.insertRow();
                         let userName = log.username || "Sconosciuto";
                         let formattedDate = new Date(log.timestamp * 1000).toLocaleString();
+                        
                         row.insertCell(0).textContent = userName;
                         row.insertCell(1).textContent = formattedDate;
                         row.insertCell(2).textContent = log.hashed_code;
+                        row.insertCell(3).textContent = log.result; // Mostra "RIUSCITO" o "FALLITO"
                     });
                 })
                 .catch(error => {

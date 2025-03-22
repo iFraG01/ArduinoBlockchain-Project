@@ -1,3 +1,4 @@
+import re
 from django.shortcuts import render
 from django.http import JsonResponse
 from .utils import get_access_logs, get_user_operations, log_access_on_blockchain, log_user_operation
@@ -8,6 +9,10 @@ from django.contrib.auth.decorators import login_required
 from .models import User
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
+
+# Funzione per validare nome e cognome
+def validate_name(name):
+    return bool(re.match(r"^[A-Za-zÀ-ÖØ-öø-ÿ' ]{2,50}$", name))
 
 # Vista per mostrare tutti gli utenti
 @login_required  # Solo gli amministratori possono accedere
@@ -39,6 +44,10 @@ def add_user(request):
         last_name = request.POST.get('last_name')
         unlock_code = request.POST.get('unlock_code')
 
+        if not validate_name(first_name) or not validate_name(last_name):
+            messages.error(request, "⚠️ Nome e Cognome devono contenere solo lettere e spazi!")
+            return redirect('user_management')
+
         if User.objects.filter(unlock_code=unlock_code).exists():
             messages.error(request, "⚠️ Questo codice è già in uso!")
         else:
@@ -62,20 +71,24 @@ def edit_user(request):
         try:
             user = User.objects.get(id=user_id)
 
+            if not validate_name(first_name) or not validate_name(last_name):
+                messages.error(request, "Nome e Cognome devono contenere solo lettere e spazi!")
+                return redirect('user_management')
+
             if User.objects.filter(unlock_code=unlock_code).exclude(id=user_id).exists():
-                messages.error(request, "⚠️ Questo codice è già in uso!")
+                messages.error(request, "Questo codice è già in uso!")
             else:
                 user.first_name = first_name
                 user.last_name = last_name
                 user.unlock_code = unlock_code
                 user.save()
-                messages.success(request, f"✅ Utente {first_name} {last_name} modificato con successo!")
+                messages.success(request, f"Utente {first_name} {last_name} modificato con successo!")
 
                 # Registra l'operazione sulla blockchain
                 log_user_operation("Modifica", f"{first_name} {last_name}")
 
         except User.DoesNotExist:
-            messages.error(request, "⚠️ L'utente non esiste!")
+            messages.error(request, "L'utente non esiste!")
 
     return redirect('user_management')
 
@@ -129,7 +142,7 @@ def receive_esp32_data(request):
         except json.JSONDecodeError:
             return JsonResponse({'success': False, 'message': 'Formato JSON non valido'}, status=400)
 
-    elif request.method == 'GET':  # ✅ Permetti test con GET
+    elif request.method == 'GET':  # Permetti test con GET
         code = request.GET.get('code')  # Prende il codice dall'URL
 
     else:
@@ -140,24 +153,21 @@ def receive_esp32_data(request):
     
     # Ricava l'utente dal database
     user = User.objects.filter(unlock_code=code).first()  # Prende il primo utente con quel codice
+    result = "RIUSCITO" if user is not None else "FALLITO"
     is_valid = User.objects.filter(unlock_code=code).exists()
+    username = user.first_name + " " + user.last_name if user else "Sconosciuto"
 
-    if user:
-        username = user.first_name + " " + user.last_name # Recupera il nome utente
-    else:
-        username = None
-
-    log_access_on_blockchain(code,username)
+    log_access_on_blockchain(username,code,result)
 
     return JsonResponse({
         'success': True,
         'is_valid': is_valid,
-        'username': username  
+        'username': username,
+        'result': result  
     })
 
 @login_required
 def get_access_logs_view(request):
-    """API endpoint per recuperare i log di accesso dalla blockchain."""
     logs = get_access_logs()
 
     # Se c'è un errore, restituisce un JSON con il messaggio di errore
@@ -170,4 +180,8 @@ def get_access_logs_view(request):
 @login_required
 def get_user_operations_view(request):
     operations = get_user_operations()
+
+    if "error" in operations:
+        return JsonResponse({"error": operations["error"]}, status=500)
+    
     return JsonResponse(operations, safe=False)

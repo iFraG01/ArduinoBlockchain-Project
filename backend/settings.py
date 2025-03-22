@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -29,10 +30,7 @@ DEBUG = True
 # E da cambiare assolutamente il contratto di SSL
 ALLOWED_HOSTS = ['127.0.0.1','192.168.178.40','192.168.1.115']
 
-LOGIN_URL='/blockchain/login/'
-
 # Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
